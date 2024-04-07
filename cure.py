@@ -137,7 +137,6 @@ def delete_outliers_iqr(df, threshold=5):
     
     return df
 
-
 def convert_clusters_to_labels(clusters):
     """
     Converts clusters from pyclustering's format to labels suitable for use with sklearn's metrics.
@@ -157,23 +156,24 @@ def apply_cure_clustering(df_minmax, k_range):
         "Calinski-Harabasz": [],
         "Davies-Bouldin": [],
     }
+    labels = {}
     for k in k_range:
         cure_instance = cure(df_minmax.values.tolist(), k, 1, 0, False)
         cure_instance.process()
         clusters = cure_instance.get_clusters()
-        labels = convert_clusters_to_labels(clusters)
-        metrics["Silhouette"].append(silhouette_score(df_minmax.values, labels))
-        metrics["Calinski-Harabasz"].append(calinski_harabasz_score(df_minmax.values, labels))
-        metrics["Davies-Bouldin"].append(davies_bouldin_score(df_minmax.values, labels))
-        print("\n")
-        print("Data in clusters for k:",k)
-        for cluster in clusters:
-            print(len(cluster))
-            # print(cluster)
+        labels_local = convert_clusters_to_labels(clusters)
+        metrics["Silhouette"].append(silhouette_score(df_minmax.values, labels_local))
+        metrics["Calinski-Harabasz"].append(calinski_harabasz_score(df_minmax.values, labels_local))
+        metrics["Davies-Bouldin"].append(davies_bouldin_score(df_minmax.values, labels_local))
+        labels[k] = labels_local
+        # print("\n")
+        # print("Data in clusters for k:",k)
+        # for cluster in clusters:
+        #     print(len(cluster))
 
     metrics_df = pd.DataFrame(metrics, index=k_range)
     optimal_k = metrics_df["Silhouette"].idxmax()
-    return optimal_k, metrics_df
+    return labels,optimal_k, metrics_df
         
 
 def run_clustering_pipeline(file_path, k_range):
@@ -181,11 +181,11 @@ def run_clustering_pipeline(file_path, k_range):
     df_no_outiers = delete_outliers_iqr(X)
     X_minmax = normalize_data(df_no_outiers)
     df_minmax = pd.DataFrame(X_minmax)
-    optimal_k, metrics_df = apply_cure_clustering(df_minmax, k_range)
+    labels, optimal_k, metrics_df = apply_cure_clustering(df_minmax, k_range)
     
     print(metrics_df)
     print("El valor óptimo de k es:", optimal_k)
-    
+   
     silhouette_scores = metrics_df["Silhouette"]
     plot_silhouette_comparison(k_range, silhouette_scores)
     
@@ -193,10 +193,11 @@ def run_clustering_pipeline(file_path, k_range):
     X_tsne = tsne.fit_transform(X_minmax)
     plot_tsne(X_tsne)
     
-    # for k_value in [optimal_k - 1, optimal_k, optimal_k + 1]:
-    #     em_model = models[k_value]
-    #     em_labels = em_model.fit_predict(X_minmax)
-    #     plot_cmap(X_tsne, em_labels, k_value)
+    for k_value in [optimal_k - 1, optimal_k, optimal_k + 1]:
+        if k_value not in labels:
+            continue
+        labels_k = labels[k_value]
+        plot_cmap(X_tsne, labels_k, k_value)
     
 if __name__ == "__main__":
     file_path = "dataset(wq).xlsx"
