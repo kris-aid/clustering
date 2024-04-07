@@ -22,11 +22,7 @@ from sklearn.metrics import (
 from scipy import stats
 from sklearn.manifold import TSNE
 from pyclustering.cluster.cure import cure 
-from pyclustering.cluster import cluster_visualizer, cluster_visualizer_multidim
-from pyclustering.samples.definitions import SIMPLE_SAMPLES
-from pyclustering.samples.definitions import FCPS_SAMPLES
-from pyclustering.utils import read_sample
-from pyclustering.utils import timedcall
+
 
 
 def read_dataset(file_path):
@@ -166,17 +162,12 @@ def apply_cure_clustering(df_minmax, k_range):
         metrics["Calinski-Harabasz"].append(calinski_harabasz_score(df_minmax.values, labels_local))
         metrics["Davies-Bouldin"].append(davies_bouldin_score(df_minmax.values, labels_local))
         labels[k] = labels_local
-        # print("\n")
-        # print("Data in clusters for k:",k)
-        # for cluster in clusters:
-        #     print(len(cluster))
 
     metrics_df = pd.DataFrame(metrics, index=k_range)
     optimal_k = metrics_df["Silhouette"].idxmax()
     return labels,optimal_k, metrics_df
         
-
-def run_clustering_pipeline(file_path, k_range):
+def run_cure_clustering_pipeline(file_path, k_range):
     X = read_dataset(file_path)
     df_no_outiers = delete_outliers_iqr(X)
     X_minmax = normalize_data(df_no_outiers)
@@ -203,7 +194,7 @@ if __name__ == "__main__":
     file_path = "dataset(wq).xlsx"
     k_range = range(2, 9)
     
-    run_clustering_pipeline(file_path, k_range)
+    run_cure_clustering_pipeline(file_path, k_range)
     
     # Puede probar con otros datasets y valores de k
     #file_path = "data/wholesale_customers.xlsx"
