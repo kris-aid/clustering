@@ -48,16 +48,16 @@ metrics = {
     "Davies-Bouldin": [],
    
 }
-
+models={}
 # Aplicar algoritmos de clustering y calcular métricas para cada valor de k
 for k in k_range:
     # Aplicar CURE
     # Implementación de CURE no está disponible en scikit-learn, puedes usar otra librería o implementarlo tú mismo
-    print(f"Aplicando CURE con k={k}...")
+    #print(f"Aplicando CURE con k={k}...")
     # Aplicar Expectation-Maximization
-    em_model = GaussianMixture(n_components=k)
+    em_model = GaussianMixture(n_components=k, max_iter=1000, random_state=42,init_params='k-means++',covariance_type='spherical')
     em_labels = em_model.fit_predict(X_minmax)
-
+    models[k]=em_model
     # Calcular métricas
     #Estas dependen de los labels verdaderos, por lo que no se pueden calcular en este caso
     # metrics["ARI"].append(adjusted_rand_score(y, em_labels))
@@ -79,7 +79,7 @@ metrics_df = pd.DataFrame(metrics, index=k_range)
 print(metrics_df)
 
 # Encontrar el k óptimo basado en alguna métrica (por ejemplo, Silhouette)
-optimal_k = 4 #metrics_df["Silhouette"].idxmax()
+optimal_k = metrics_df["Silhouette"].idxmax()
 
 # Imprimir el valor de k óptimo
 print("El valor óptimo de k es:", optimal_k)
@@ -95,7 +95,7 @@ plt.show()
 
 
 # Plot t-SNE para el espacio original
-tsne = TSNE(n_components=2, random_state=0)
+tsne = TSNE(n_components=2, random_state=0, metric="cosine")
 X_tsne = tsne.fit_transform(X_minmax)
 
 plt.figure(figsize=(8, 6))
@@ -109,7 +109,7 @@ plt.show()
 # Plot t-SNE después de aplicado el método de clustering
 for k_value in [optimal_k - 1, optimal_k, optimal_k + 1]:
     # Aplicar clustering con el valor de k seleccionado
-    em_model = GaussianMixture(n_components=k_value)
+    em_model = models[k_value]
     em_labels = em_model.fit_predict(X_minmax)
     
     # Plot t-SNE
