@@ -126,15 +126,15 @@ def run_clustering_pipeline(file_path, k_range):
     BIC_scores = metrics_df["BIC"]
     plot_silhouette_comparison(k_range, BIC_scores)
     
-    tsne = TSNE(n_components=2, random_state=0, metric="cosine", learning_rate=100, perplexity=15)
-
+    tsne = TSNE(n_components=2, random_state=0, metric="manhattan", learning_rate=50, perplexity=500)
+    optimal_k=7
     probs = models[optimal_k].predict_proba(X_minmax)
     normalized_probs = (probs - probs.min(axis=0)) / (probs.max(axis=0) - probs.min(axis=0))
     mean_probs = np.mean(normalized_probs, axis=1)
     std_probs = np.std(normalized_probs, axis=1)
     num_std = 2
     lower_bound = mean_probs - num_std * std_probs
-    upper_bound = mean_probs + num_std * std_probs
+    upper_bound = mean_probs + 1
     outliers = np.any((normalized_probs < lower_bound[:, None]) | (normalized_probs > upper_bound[:, None]), axis=1)
 
     # Filter out the outliers
