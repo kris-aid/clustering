@@ -38,21 +38,25 @@ def apply_clustering(X_minmax, k_range):
         "Silhouette": [],
         "Calinski-Harabasz": [],
         "Davies-Bouldin": [],
+        "BIC": [],
+        "AIC": [],
     }
     models = {}
     
     for k in k_range:
-        em_model = GaussianMixture(n_components=k, max_iter=1000, random_state=42, init_params='k-means++', covariance_type='spherical')
+        em_model = GaussianMixture(n_components=k, max_iter=500, random_state=42, init_params='k-means++', covariance_type='spherical',reg_covar=1e-2,n_init=10)
         em_labels = em_model.fit_predict(X_minmax)
         models[k] = em_model
         
         metrics["Silhouette"].append(silhouette_score(X_minmax, em_labels))
         metrics["Calinski-Harabasz"].append(calinski_harabasz_score(X_minmax, em_labels))
         metrics["Davies-Bouldin"].append(davies_bouldin_score(X_minmax, em_labels))
+        metrics["BIC"].append(em_model.bic(X_minmax))
+        metrics["AIC"].append(em_model.aic(X_minmax))
     
     metrics_df = pd.DataFrame(metrics, index=k_range)
     
-    optimal_k = metrics_df["Silhouette"].idxmax()
+    optimal_k = np.argmin(metrics_df["BIC"])+1
     
     return models, optimal_k, metrics_df
 
@@ -111,28 +115,44 @@ def plot_cmap(X, labels,k_value):
     plt.show()
 
 def run_clustering_pipeline(file_path, k_range):
-    X_minmax = prepare_data(file_path,remove_outliers=True)
+    X_minmax = prepare_data(file_path,remove_outliers=False)
     models, optimal_k, metrics_df = apply_clustering(X_minmax, k_range)
+
+    #optimal_k=6
     
     print(metrics_df)
     print("El valor óptimo de k es:", optimal_k)
     
-    silhouette_scores = metrics_df["Silhouette"]
-    plot_silhouette_comparison(k_range, silhouette_scores)
+    BIC_scores = metrics_df["BIC"]
+    plot_silhouette_comparison(k_range, BIC_scores)
     
-    tsne = TSNE(n_components=2, random_state=0, metric="cosine")
-    X_tsne = tsne.fit_transform(X_minmax)
+    tsne = TSNE(n_components=2, random_state=0, metric="cosine", learning_rate=500, perplexity=30)
+
+    probs = models[optimal_k].predict_proba(X_minmax)
+    normalized_probs = (probs - probs.min(axis=0)) / (probs.max(axis=0) - probs.min(axis=0))
+    mean_probs = np.mean(normalized_probs, axis=1)
+    std_probs = np.std(normalized_probs, axis=1)
+    num_std = 2
+    lower_bound = mean_probs - num_std * std_probs
+    upper_bound = mean_probs + num_std * std_probs
+    outliers = np.any((normalized_probs < lower_bound[:, None]) | (normalized_probs > upper_bound[:, None]), axis=1)
+
+    # Filter out the outliers
+    X_filtered = X_minmax[~outliers]
+    X_filt_minmax=normalize_data(X_filtered)
+    X_tsne = tsne.fit_transform(X_filt_minmax)
     plot_tsne(X_tsne)
     
-    for k_value in [optimal_k - 1, optimal_k, optimal_k + 1]:
+    for k_value in [4,5,6,7,8]:
+        
         if k_value not in models:
             continue
         em_model = models[k_value]
-        em_labels = em_model.fit_predict(X_minmax)
+        em_labels = em_model.fit_predict(X_filtered)
         plot_cmap(X_tsne, em_labels, k_value)
     
 
-def prepare_data(file_path, remove_outliers=True):
+def prepare_data(file_path, remove_outliers=False):
     X = read_dataset(file_path)
     if remove_outliers:
         df_no_outiers = delete_outliers_iqr(X)
@@ -225,7 +245,7 @@ if __name__ == "__main__":
     k_range = range(2, 9)
     
     run_clustering_pipeline(file_path, k_range)
-    run_cure_clustering_pipeline(file_path, k_range)
+    #run_cure_clustering_pipeline(file_path, k_range)
     # Puede probar con otros datasets y valores de k
     #file_path = "data/wholesale_customers.xlsx"
     #k_range = range(2, 11)
