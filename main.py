@@ -186,7 +186,7 @@ def apply_cure_clustering(df_minmax, k_range):
     }
     labels = {}
     for k in k_range:
-        cure_instance = cure(df_minmax.values.tolist(), k, 1, 0, False)
+        cure_instance = cure(df_minmax.values.tolist(), k, 1, 0.1, True)
         cure_instance.process()
         clusters = cure_instance.get_clusters()
         labels_local = convert_clusters_to_labels(clusters)
