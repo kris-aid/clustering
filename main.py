@@ -111,7 +111,7 @@ def plot_cmap(X, labels,k_value):
     plt.show()
 
 def run_clustering_pipeline(file_path, k_range):
-    X_minmax = prepare_data(file_path,remove_outliers=True)
+    X_minmax = prepare_data(file_path,remove_outliers=False)
     models, optimal_k, metrics_df = apply_clustering(X_minmax, k_range)
     
     print(metrics_df)
@@ -200,7 +200,7 @@ def apply_cure_clustering(df_minmax, k_range):
     return labels,optimal_k, metrics_df
         
 def run_cure_clustering_pipeline(file_path, k_range):
-    X_minmax = prepare_data(file_path,remove_outliers=True)
+    X_minmax = prepare_data(file_path,remove_outliers=False)
     df_minmax = pd.DataFrame(X_minmax)
     labels, optimal_k, metrics_df = apply_cure_clustering(df_minmax, k_range)
     
